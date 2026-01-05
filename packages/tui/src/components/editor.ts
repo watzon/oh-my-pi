@@ -65,6 +65,7 @@ export class Editor implements Component {
 	};
 
 	private theme: EditorTheme;
+	private useTerminalCursor = false;
 
 	// Store last render width for cursor navigation
 	private lastWidth: number = 80;
@@ -112,6 +113,13 @@ export class Editor implements Component {
 	 */
 	setTopBorder(content: EditorTopBorder | undefined): void {
 		this.topBorderContent = content;
+	}
+
+	/**
+	 * Use the real terminal cursor instead of rendering a cursor glyph.
+	 */
+	setUseTerminalCursor(useTerminalCursor: boolean): void {
+		this.useTerminalCursor = useTerminalCursor;
 	}
 
 	/**
@@ -224,7 +232,7 @@ export class Editor implements Component {
 			let displayWidth = visibleWidth(layoutLine.text);
 
 			// Add cursor if this line has it
-			if (layoutLine.hasCursor && layoutLine.cursorPos !== undefined) {
+			if (!this.useTerminalCursor && layoutLine.hasCursor && layoutLine.cursorPos !== undefined) {
 				const before = displayText.slice(0, layoutLine.cursorPos);
 				const after = displayText.slice(layoutLine.cursorPos);
 
@@ -283,6 +291,36 @@ export class Editor implements Component {
 		}
 
 		return result;
+	}
+
+	getCursorPosition(width: number): { row: number; col: number } | null {
+		if (!this.useTerminalCursor) return null;
+
+		const contentWidth = width - 6;
+		if (contentWidth <= 0) return null;
+
+		const layoutLines = this.layoutText(contentWidth);
+		for (let i = 0; i < layoutLines.length; i++) {
+			const layoutLine = layoutLines[i];
+			if (!layoutLine || !layoutLine.hasCursor || layoutLine.cursorPos === undefined) continue;
+
+			const lineWidth = visibleWidth(layoutLine.text);
+			const isCursorAtLineEnd = layoutLine.cursorPos === layoutLine.text.length;
+
+			if (isCursorAtLineEnd && lineWidth >= contentWidth && layoutLine.text.length > 0) {
+				const graphemes = [...segmenter.segment(layoutLine.text)];
+				const lastGrapheme = graphemes[graphemes.length - 1]?.segment || "";
+				const lastWidth = visibleWidth(lastGrapheme) || 1;
+				const colOffset = 3 + Math.max(0, lineWidth - lastWidth);
+				return { row: 1 + i, col: colOffset };
+			}
+
+			const before = layoutLine.text.slice(0, layoutLine.cursorPos);
+			const colOffset = 3 + visibleWidth(before);
+			return { row: 1 + i, col: colOffset };
+		}
+
+		return null;
 	}
 
 	handleInput(data: string): void {

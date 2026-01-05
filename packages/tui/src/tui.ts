@@ -27,6 +27,11 @@ export interface Component {
 	handleInput?(data: string): void;
 
 	/**
+	 * Optional cursor position within the rendered output (0-based row/col).
+	 */
+	getCursorPosition?(width: number): { row: number; col: number } | null;
+
+	/**
 	 * Invalidate any cached rendering state.
 	 * Called when theme changes or when component needs to re-render from scratch.
 	 */
@@ -62,6 +67,19 @@ export class Container implements Component {
 		}
 	}
 
+	getCursorPosition(width: number): { row: number; col: number } | null {
+		let rowOffset = 0;
+		for (const child of this.children) {
+			const lines = child.render(width);
+			const childCursor = child.getCursorPosition?.(width) ?? null;
+			if (childCursor) {
+				return { row: rowOffset + childCursor.row, col: childCursor.col };
+			}
+			rowOffset += lines.length;
+		}
+		return null;
+	}
+
 	render(width: number): string[] {
 		const lines: string[] = [];
 		for (const child of this.children) {
@@ -84,6 +102,7 @@ export class TUI extends Container {
 	public onDebug?: () => void;
 	private renderRequested = false;
 	private cursorRow = 0; // Track where cursor is (0-indexed, relative to our first line)
+	private previousCursor: { row: number; col: number } | null = null;
 	private inputBuffer = ""; // Buffer for parsing terminal responses
 	private cellSizeQueryPending = false;
 	private inputQueue: string[] = []; // Queue input during cell size query to avoid interleaving
@@ -132,6 +151,7 @@ export class TUI extends Container {
 			this.previousLines = [];
 			this.previousWidth = 0;
 			this.cursorRow = 0;
+			this.previousCursor = null;
 		}
 		if (this.renderRequested) return;
 		this.renderRequested = true;
@@ -139,6 +159,42 @@ export class TUI extends Container {
 			this.renderRequested = false;
 			this.doRender();
 		});
+	}
+
+	private areCursorsEqual(
+		left: { row: number; col: number } | null,
+		right: { row: number; col: number } | null,
+	): boolean {
+		if (!left && !right) return true;
+		if (!left || !right) return false;
+		return left.row === right.row && left.col === right.col;
+	}
+
+	private updateHardwareCursor(
+		width: number,
+		totalLines: number,
+		cursor: { row: number; col: number } | null,
+		currentCursorRow: number,
+	): void {
+		if (!cursor || totalLines <= 0) {
+			this.terminal.hideCursor();
+			return;
+		}
+
+		const targetRow = Math.max(0, Math.min(cursor.row, totalLines - 1));
+		const targetCol = Math.max(0, Math.min(cursor.col, width - 1));
+		const rowDelta = targetRow - currentCursorRow;
+
+		let buffer = "";
+		if (rowDelta > 0) {
+			buffer += `\x1b[${rowDelta}B`;
+		} else if (rowDelta < 0) {
+			buffer += `\x1b[${-rowDelta}A`;
+		}
+		buffer += `\r\x1b[${targetCol + 1}G`;
+		this.terminal.write(buffer);
+		this.cursorRow = targetRow;
+		this.terminal.showCursor();
 	}
 
 	private handleInput(data: string): void {
@@ -235,6 +291,7 @@ export class TUI extends Container {
 
 		// Render all components to get new lines
 		const newLines = this.render(width);
+		const cursorInfo = this.getCursorPosition(width);
 
 		// Width changed - need full re-render
 		const widthChanged = this.previousWidth !== 0 && this.previousWidth !== width;
@@ -250,6 +307,8 @@ export class TUI extends Container {
 			this.terminal.write(buffer);
 			// After rendering N lines, cursor is at end of last line (line N-1)
 			this.cursorRow = newLines.length - 1;
+			this.updateHardwareCursor(width, newLines.length, cursorInfo, this.cursorRow);
+			this.previousCursor = cursorInfo;
 			this.previousLines = newLines;
 			this.previousWidth = width;
 			return;
@@ -266,6 +325,8 @@ export class TUI extends Container {
 			buffer += "\x1b[?2026l"; // End synchronized output
 			this.terminal.write(buffer);
 			this.cursorRow = newLines.length - 1;
+			this.updateHardwareCursor(width, newLines.length, cursorInfo, this.cursorRow);
+			this.previousCursor = cursorInfo;
 			this.previousLines = newLines;
 			this.previousWidth = width;
 			return;
@@ -287,6 +348,10 @@ export class TUI extends Container {
 
 		// No changes
 		if (firstChanged === -1) {
+			if (!this.areCursorsEqual(cursorInfo, this.previousCursor)) {
+				this.updateHardwareCursor(width, newLines.length, cursorInfo, currentCursorRow);
+				this.previousCursor = cursorInfo;
+			}
 			return;
 		}
 
@@ -306,6 +371,8 @@ export class TUI extends Container {
 			buffer += "\x1b[?2026l"; // End synchronized output
 			this.terminal.write(buffer);
 			this.cursorRow = newLines.length - 1;
+			this.updateHardwareCursor(width, newLines.length, cursorInfo, this.cursorRow);
+			this.previousCursor = cursorInfo;
 			this.previousLines = newLines;
 			this.previousWidth = width;
 			return;
@@ -372,6 +439,8 @@ export class TUI extends Container {
 
 		// Cursor is now at end of last line
 		this.cursorRow = newLines.length - 1;
+		this.updateHardwareCursor(width, newLines.length, cursorInfo, this.cursorRow);
+		this.previousCursor = cursorInfo;
 
 		this.previousLines = newLines;
 		this.previousWidth = width;

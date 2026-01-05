@@ -180,6 +180,7 @@ export class InteractiveMode {
 		this.pendingMessagesContainer = new Container();
 		this.statusContainer = new Container();
 		this.editor = new CustomEditor(getEditorTheme());
+		this.editor.setUseTerminalCursor(true);
 		this.editorContainer = new Container();
 		this.editorContainer.addChild(this.editor);
 		this.statusLine = new StatusLineComponent(session);

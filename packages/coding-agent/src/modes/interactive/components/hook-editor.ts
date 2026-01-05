@@ -39,6 +39,7 @@ export class HookEditorComponent extends Container {
 
 		// Create editor
 		this.editor = new Editor(getEditorTheme());
+		this.editor.setUseTerminalCursor(true);
 		if (prefill) {
 			this.editor.setText(prefill);
 		}
