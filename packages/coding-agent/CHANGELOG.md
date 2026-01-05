@@ -60,6 +60,7 @@
 - Changed status line rendering to support left/right segment positioning with separators
 - Changed hardcoded UI symbols to use theme-configurable glyphs throughout the interface
 - Changed tree drawing characters to use theme-defined box-drawing symbols
+- Changed CLI image attachments to resize if larger than 2048px (fit within 1920x1080) and convert >2MB images to JPEG
 
 ### Removed
 
