@@ -1,6 +1,10 @@
 # Changelog
 
 ## [Unreleased]
+### Fixed
+
+- Fixed find tool failing to match patterns with path separators (e.g., `reports/**`) by enabling full-path matching in fd
+
 ### Changed
 
 - Changed multi-task display to show task descriptions instead of agent names when available

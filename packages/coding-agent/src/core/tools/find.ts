@@ -83,8 +83,14 @@ export function createFindTool(cwd: string): AgentTool<typeof findSchema> {
 				const shouldSortByMtime = sortByMtime ?? false;
 
 				// Build fd arguments
+				// When pattern contains path separators (e.g. "reports/**"), use --full-path
+				// so fd matches against the full path, not just the filename.
+				// Also prepend **/ to anchor the pattern at any depth in the search path.
+				const hasPathSeparator = pattern.includes("/") || pattern.includes("\\");
+				const effectivePattern = hasPathSeparator && !pattern.startsWith("**/") ? `**/${pattern}` : pattern;
 				const args: string[] = [
 					"--glob", // Use glob pattern
+					...(hasPathSeparator ? ["--full-path"] : []),
 					"--color=never", // No ANSI colors
 					"--max-results",
 					String(effectiveLimit),
@@ -127,7 +133,7 @@ export function createFindTool(cwd: string): AgentTool<typeof findSchema> {
 				}
 
 				// Pattern and path
-				args.push(pattern, searchPath);
+				args.push(effectivePattern, searchPath);
 
 				// Run fd
 				const result = Bun.spawnSync([fdPath, ...args], {
