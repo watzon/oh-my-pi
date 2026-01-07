@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [3.25.0] - 2026-01-07
 ### Added
 
 - Added `complete` tool for structured subagent output with JSON schema validation
