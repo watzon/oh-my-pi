@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [3.33.0] - 2026-01-08
+
 ### Added
 - Added `env` support in `settings.json` for automatically setting environment variables on startup
 - Added environment variable management methods to SettingsManager (get/set/clear)

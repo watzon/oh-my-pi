@@ -154,20 +154,25 @@ async function cmdRelease(version: string): Promise<void> {
 	await updateChangelogsForRelease(version);
 	console.log();
 
-	// 5. Commit and tag
+	// 5. Run checks
+	console.log("Running checks...");
+	await $`bun run check`;
+	console.log();
+
+	// 6. Commit and tag
 	console.log("Committing and tagging...");
 	await $`git add .`;
 	await $`git commit -m ${`chore: bump version to ${version}`}`;
 	await $`git tag ${`v${version}`}`;
 	console.log();
 
-	// 6. Push
+	// 7. Push
 	console.log("Pushing to remote...");
 	await $`git push origin main`;
 	await $`git push origin ${`v${version}`}`;
 	console.log();
 
-	// 7. Watch CI
+	// 8. Watch CI
 	console.log("Watching CI...");
 	const success = await watchCI();
 

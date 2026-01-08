@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [3.33.0] - 2026-01-08
+
 ### Fixed
 
 - Ensured aborted assistant responses always include an error message for callers.
