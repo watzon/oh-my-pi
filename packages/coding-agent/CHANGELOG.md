@@ -1,6 +1,10 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+
+- Added `planner` built-in agent for comprehensive implementation planning with slow model
+
 ### Removed
 
 - Removed `architect-plan`, `implement`, and `implement-with-critic` built-in agent commands
