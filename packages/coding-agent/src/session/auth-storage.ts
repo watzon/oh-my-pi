@@ -16,6 +16,8 @@ import {
 	loginGeminiCli,
 	loginGitHubCopilot,
 	loginKimi,
+	loginMiniMaxCode,
+	loginMiniMaxCodeCn,
 	loginOpenAICodex,
 	loginOpenCode,
 	type OAuthController,
@@ -676,6 +678,16 @@ export class AuthStorage {
 				break;
 			case "opencode": {
 				const apiKey = await loginOpenCode(ctrl);
+				credentials = { access: apiKey, refresh: apiKey, expires: Number.MAX_SAFE_INTEGER };
+				break;
+			}
+			case "minimax-code": {
+				const apiKey = await loginMiniMaxCode(ctrl);
+				credentials = { access: apiKey, refresh: apiKey, expires: Number.MAX_SAFE_INTEGER };
+				break;
+			}
+			case "minimax-code-cn": {
+				const apiKey = await loginMiniMaxCodeCn(ctrl);
 				credentials = { access: apiKey, refresh: apiKey, expires: Number.MAX_SAFE_INTEGER };
 				break;
 			}
